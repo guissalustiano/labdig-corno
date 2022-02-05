@@ -5,6 +5,7 @@ from datetime import datetime
 from enum import Enum
 from functools import cached_property
 from attr import dataclass
+from pandas import value_counts
 import vcd
 from vcd.reader import TokenKind
 from dataclasses import dataclass
@@ -28,15 +29,18 @@ class VcdSimulation:
         return token.data
 
     @cached_property
-    def scope_vars(self) -> Dict[vcd.reader.ScopeDecl, List[vcd.reader.VarDecl]]:
+    def scope_vars(self) -> Dict[vcd.reader.ScopeDecl, Dict[int, vcd.reader.VarDecl]]:
         acc = {}
         for token in self._tokens:
             if token.kind == TokenKind.SCOPE:
-                scope = token.data
-                acc[scope] = []
+                scope = token.data.ident
+                acc[scope] = {}
             elif token.kind == TokenKind.VAR:
-                var = token.data
-                acc[scope].append(var)
+                var = token.data.reference
+                if var not in acc[scope]:
+                    acc[scope][var] = {}
+                acc[scope][var][token.data.bit_index] = token.data
+                
         return acc
 
     @cached_property
@@ -51,21 +55,30 @@ class VcdSimulation:
                 acc[time].append(change)
         return acc
 
-    def to_events(self, var: vcd.reader.VarDecl)-> List[ChannelEvent]:
+    def to_events(self, vars: Dict[Union[None, int], vcd.reader.VarDecl])-> List[ChannelEvent]:
         acc = []
+        value = ['X'] * len(vars)
+        vars = sorted(vars.values(), key=lambda x: x.bit_index, reverse=True)
         for time, changes in self.time_changes.items():
+            has_changed = False
             for change in changes:
-                if change.id_code == var.id_code:
-                    event = ChannelEvent(time, change.value)
-                    acc.append(event)
+                for var in vars:
+                    if change.id_code == var.id_code:
+                        index = var.bit_index if var.bit_index is not None else 0
+                        value[index] = change.value
+                        has_changed = True
+            if has_changed:
+                event = ChannelEvent(time, ''.join(value))
+                acc.append(event)
         return acc 
 
     def to_channel(self) -> List[Channel]:
         acc = []
-        for scope, vars in self.scope_vars.items():
-            for var in vars:
-                channel = Channel(var.size, scope.ident, var.reference, self.to_events(var))
-                acc.append(channel)
+        for module, channels in self.scope_vars.items():
+            for channel_name, vars in channels.items():
+                size = len(vars)
+                events = self.to_events(vars)
+                acc.append(Channel(size, module, channel_name, events))
         return acc
 
     def to_simulation(self) -> Simulation:
@@ -76,7 +89,7 @@ class VcdSimulation:
 class Signal(Enum):
     ONE = 'H'
     ZERO = 'L'
-    UNKNOWN = 'U'
+    UNKNOWN = 'X'
     IMPEDANCE = 'Z'
     
 
@@ -107,7 +120,7 @@ class Channel:
         while i < len(self.events) and self.events[i].time <= time:
             i += 1
         if i == 0:
-            return 'U' # TODO completar com resultado da Enum
+            return 'X' # TODO completar com resultado da Enum
         return self.events[i-1].value
 
     def next_event(self, time) -> ChannelEvent:
@@ -169,5 +182,6 @@ if __name__ == '__main__':
 
     with open('fluxo_dados.vcd', 'rb') as f:
         vcd_sim = VcdSimulation(f)
-    sim = vcd_sim.to_simulation()
-    print(simulation.to_tikz(0, 50))
+    # sim = vcd_sim.to_simulation()
+    pprint(vcd_sim.to_simulation())
+    # print(simulation.to_tikz(0, 50))
