@@ -10,6 +10,7 @@ from vcd.reader import TokenKind
 from dataclasses import dataclass
 
 from config_parser import ChannelConfig
+from signal import Signal
 
 class VcdSimulation:
     _tokens: List[vcd.reader.Token]
@@ -89,12 +90,6 @@ class VcdSimulation:
 
     def to_simulation(self) -> Simulation:
         return Simulation(self.to_channel())
-                
-class Signal(Enum):
-    ONE = 'H'
-    ZERO = 'L'
-    UNKNOWN = 'X'
-    IMPEDANCE = 'Z'
 
 @dataclass
 class Simulation:
@@ -103,13 +98,16 @@ class Simulation:
     def __getitem__(self, key):
         return [c for c in self.channels if c.name == key][0]
 
-    def to_tikz(self, start, end, channels_configs: List[ChannelConfig]):
+    def to_tikz(self, start, end, channels_configs: List[ChannelConfig], scale):
         tikz_lines = []
         for channel_config in channels_configs:
-            tikz_line = self[channel_config.name].to_tikz_line(start, end, channel_config)
+            tikz_line = self[channel_config.name].to_tikz_line(start,
+                                                               end,
+                                                               channel_config,
+                                                               scale)
             tikz_lines.append('\t'+tikz_line)
 
-        tikz_table = ['\\begin{{tikztimingtable}}', *tikz_lines, '\\end{{tikztimingtable}}']
+        tikz_table = ['\\begin{tikztimingtable}', *tikz_lines, '\\end{tikztimingtable}']
         return '\n'.join(tikz_table)
 
 @dataclass
@@ -124,7 +122,7 @@ class Channel:
         while i < len(self.events) and self.events[i].time <= time:
             i += 1
         if i == 0:
-            return 'X' # TODO completar com resultado da Enum
+            return 'X'
         return self.events[i-1].value
 
     def next_event(self, time) -> ChannelEvent:
@@ -137,12 +135,12 @@ class Channel:
 
 
     def __signal_str_standard(self, duration, type_):
-        return '{0}{{{1}}} \\\\'.format(duration, type_)
+        return '{0}{{{1}}}'.format(duration, type_)
 
     def __signal_str_with_color(self, duration, type_, color):
-        return '{0}{{{1}}} [{2}] \\\\'.format(duration, type_, color)
+        return '{0}{{{1}}} [{2}]'.format(duration, type_, color)
 
-    def to_tikz_line(self, start, end, config: ChannelConfig):
+    def to_tikz_line(self, start, end, config: ChannelConfig, scale):
         tikz_line = [config.render_name+' &']
         current_value = self.value_at(start)
         current_time = start
@@ -153,55 +151,27 @@ class Channel:
             else:
                 next_event_time = next_event.time
 
-            signal_duration = next_event_time - current_time
-            signal_type = current_value
+            signal_duration = (next_event_time - current_time)*scale
+            signal = Signal(representation=config.representation,
+                                 value=current_value).to_tikz()
             color = config.color
             if color is not None:
                 signal_str = self.__signal_str_with_color(
-                    signal_duration, signal_type, color.value)
+                    signal_duration, signal, color.value)
             else:
                 signal_str = self.__signal_str_standard(
-                    signal_duration, signal_type)
-            tikz_line.append(signal_str) # TODO completar com resultado da Enum
+                    signal_duration, signal)
+            tikz_line.append(signal_str)
 
             if next_event is None:
                 break
             current_value = next_event.value
             current_time = next_event.time
 
+        tikz_line.append('\\\\')
         return ' '.join(tikz_line) 
 
 @dataclass
 class ChannelEvent:
     time: int
     value: str
-
-if __name__ == '__main__':
-    clk = Channel(1, 'teste', 'clock', [
-        ChannelEvent( 0, 0),
-        ChannelEvent(10, 1),
-        ChannelEvent(20, 0),
-        ChannelEvent(30, 1),
-        ChannelEvent(40, 0),
-        ChannelEvent(50, 1),
-    ])
-    enable = Channel(1, 'teste', 'enable', [
-        ChannelEvent( 0, 0),
-        ChannelEvent(30, 1),
-        # ChannelEvent(50, 0),
-    ])
-    simulation = Simulation([
-        clk,
-        enable
-    ])
-    # print(clk.to_tikz_line(0,50))
-    # print(clk.to_tikz_line(5,20))
-    # print(clk.to_tikz_line(0,15))
-    # print(clk.to_tikz_line(5,15))
-    print(simulation.to_tikz(0, 50))
-
-    # with open('fluxo_dados.vcd', 'rb') as f:
-    #     vcd_sim = VcdSimulation(f)
-    # # sim = vcd_sim.to_simulation()
-    # pprint(vcd_sim.to_simulation())
-    # print(simulation.to_tikz(0, 50))
