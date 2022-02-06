@@ -10,7 +10,7 @@ from vcd.reader import TokenKind
 from dataclasses import dataclass
 
 from config_parser import ChannelConfig
-from signal import Signal
+from signal_values import Signal
 
 class VcdSimulation:
     _tokens: List[vcd.reader.Token]
@@ -140,13 +140,14 @@ class Channel:
     def __signal_str_with_color(self, duration, type_, color):
         return '{0}{{{1}}} [{2}]'.format(duration, type_, color)
 
+    # ele nao ta parando
     def to_tikz_line(self, start, end, config: ChannelConfig, scale):
         tikz_line = [config.render_name+' &']
         current_value = self.value_at(start)
         current_time = start
         while current_time < end:
             next_event = self.next_event(current_time)
-            if next_event is None:
+            if next_event is None: # TODO <- nao para aqui por algum motivo
                 next_event_time = end
             else:
                 next_event_time = next_event.time

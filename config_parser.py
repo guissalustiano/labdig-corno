@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import List
 from dataclasses import dataclass
 from enum import Enum
-from signal import Representations
+from signal_values import Representations
 
 @dataclass
 class SimulationConfig:

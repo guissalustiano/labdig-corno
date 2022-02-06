@@ -1,6 +1,6 @@
 import time
 from config_parser import Color, ChannelConfig, SignalDirection, SimulationConfig, Frame, TableConfig
-from signal import Representations
+from signal_values import Representations
 
 signals=[
   ChannelConfig(
