@@ -5,16 +5,22 @@ from datetime import datetime
 from enum import Enum
 from functools import cached_property
 from attr import dataclass
-from pandas import value_counts
 import vcd
 from vcd.reader import TokenKind
 from dataclasses import dataclass
+
+from config_parser import ChannelConfig
 
 class VcdSimulation:
     _tokens: List[vcd.reader.Token]
 
     def __init__(self, vcd_stream: vcd.reader.HasReadinto):
         self._tokens = list(vcd.reader.tokenize(vcd_stream))
+
+    @staticmethod
+    def from_filename(filename: str) -> VcdSimulation:
+        with open('fluxo_dados.vcd', 'rb') as f:
+            return VcdSimulation(f)
 
     def _filtered_tokens(self, tokenKind: TokenKind):
         return [token for token in self._tokens if tokenKind == token.kind]
@@ -84,28 +90,26 @@ class VcdSimulation:
     def to_simulation(self) -> Simulation:
         return Simulation(self.to_channel())
                 
-        
-
 class Signal(Enum):
     ONE = 'H'
     ZERO = 'L'
     UNKNOWN = 'X'
     IMPEDANCE = 'Z'
-    
 
 @dataclass
 class Simulation:
     channels: List[Channel]
 
-    def to_tikz(self, start, end, channel_names=None):
-        tikz_table = ['\\begin{{tikztimingtable}}']
-        channels = self.channels
-        if channel_names is not None: 
-            channels = [c for c in self.channels if c.name in channel_names] 
-        for channel in channels:
-            tikz_table.append('\t'+channel.to_tikz_line(start, end))
-        tikz_table.append('\\end{{tikztimingtable}}')
+    def __getitem__(self, key):
+        return [c for c in self.channels if c.name == key][0]
 
+    def to_tikz(self, start, end, channels_configs: List[ChannelConfig]):
+        tikz_lines = []
+        for channel_config in channels_configs:
+            tikz_line = self[channel_config.name].to_tikz_line(start, end, channel_config)
+            tikz_lines.append('\t'+tikz_line)
+
+        tikz_table = ['\\begin{{tikztimingtable}}', *tikz_lines, '\\end{{tikztimingtable}}']
         return '\n'.join(tikz_table)
 
 @dataclass
@@ -131,8 +135,15 @@ class Channel:
             return None
         return self.events[i]
 
-    def to_tikz_line(self, start, end):
-        tikz_line = [self.name+' &']
+
+    def __signal_str_standard(self, duration, type_):
+        return '{0}{{{1}}} \\\\'.format(duration, type_)
+
+    def __signal_str_with_color(self, duration, type_, color):
+        return '{0}{{{1}}} [{2}] \\\\'.format(duration, type_, color)
+
+    def to_tikz_line(self, start, end, config: ChannelConfig):
+        tikz_line = [config.render_name+' &']
         current_value = self.value_at(start)
         current_time = start
         while current_time < end:
@@ -141,9 +152,18 @@ class Channel:
                 next_event_time = end
             else:
                 next_event_time = next_event.time
+
             signal_duration = next_event_time - current_time
             signal_type = current_value
-            tikz_line.append(f'{signal_duration}{{{signal_type}}}') # TODO completar com resultado da Enum
+            color = config.color
+            if color is not None:
+                signal_str = self.__signal_str_with_color(
+                    signal_duration, signal_type, color.value)
+            else:
+                signal_str = self.__signal_str_standard(
+                    signal_duration, signal_type)
+            tikz_line.append(signal_str) # TODO completar com resultado da Enum
+
             if next_event is None:
                 break
             current_value = next_event.value
@@ -178,10 +198,10 @@ if __name__ == '__main__':
     # print(clk.to_tikz_line(5,20))
     # print(clk.to_tikz_line(0,15))
     # print(clk.to_tikz_line(5,15))
-    # print(simulation.to_tikz(0, 50))
+    print(simulation.to_tikz(0, 50))
 
-    with open('fluxo_dados.vcd', 'rb') as f:
-        vcd_sim = VcdSimulation(f)
-    # sim = vcd_sim.to_simulation()
-    pprint(vcd_sim.to_simulation())
+    # with open('fluxo_dados.vcd', 'rb') as f:
+    #     vcd_sim = VcdSimulation(f)
+    # # sim = vcd_sim.to_simulation()
+    # pprint(vcd_sim.to_simulation())
     # print(simulation.to_tikz(0, 50))
