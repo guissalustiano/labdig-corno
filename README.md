@@ -6,8 +6,9 @@ e esse foi o resultado de alguns dias de trabalho
 
 ## Como usar
 Baixa isso ai e da um `-h`, cria carater
+
 Qualquer duvida olha o codigo fonte, nao gostou abre um PR
 
 ## Manteners
-    - [Guilherme Salustiano](https://github.com/guissalustiano)
-    - [Tomaz Sueller](https://github.com/tomaz-suller)
+    - (Guilherme Salustiano)[https://github.com/guissalustiano]
+    - (Tomaz Suller)[https://github.com/tomaz-suller]
