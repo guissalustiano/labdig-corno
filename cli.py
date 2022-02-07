@@ -1,6 +1,9 @@
-from simulation import Simulation, VcdSimulation
+from simulation import Simulation
+from vcd_simulation import VcdSimulation
 from table_generator import TableGenerator
 import click
+
+from tikz_generator import TikzGenerator
 
 @click.group()
 def cli():
@@ -12,10 +15,8 @@ def tikz_timing(vcd_filename):
     from config import timing_config
     simulation: Simulation = VcdSimulation.from_filename(vcd_filename).to_simulation()
     for frame in timing_config.frames:
-        print(simulation.to_tikz(start=frame.start,
-                                 end=frame.end,
-                                 channels_configs=timing_config.signals,
-                                 scale=timing_config.scale))
+        tizk_gen = TikzGenerator(simulation, timing_config.signals, frame.start, frame.end, timing_config.scale)
+        print(tizk_gen.generate_tikz())
         print('\n')
 
 @cli.command()

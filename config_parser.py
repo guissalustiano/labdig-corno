@@ -25,6 +25,10 @@ class ChannelConfig:
         self.type_ = type_
         self.representation = representation
 
+    @property
+    def render_name_escaped(self):
+        return self.render_name.replace('_', '\\_')
+
 @dataclass
 class Frame:
     start: int

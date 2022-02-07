@@ -1,7 +1,8 @@
 from typing import List
 
 from config_parser import ChannelConfig, SignalDirection
-from simulation import Simulation, VcdSimulation
+from simulation import Simulation
+from vcd_simulation import VcdSimulation
 
 class TableGenerator():
     simulation: Simulation
