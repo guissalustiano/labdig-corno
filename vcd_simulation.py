@@ -66,8 +66,8 @@ class VcdSimulation:
             for change in changes:
                 for var in vars:
                     if change.id_code == var.id_code:
-                        index = var.bit_index if var.bit_index is not None else 0
-                        value[index] = change.value
+                        index = var.bit_index if isinstance(var.bit_index, int) else 0
+                        value[index] = str(change.value)
                         has_changed = True
             if has_changed:
                 event = ChannelEvent(time, ''.join(value))

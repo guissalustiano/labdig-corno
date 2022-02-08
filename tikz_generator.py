@@ -1,12 +1,12 @@
 from typing import List
+from base_generator import BaseGenerator
 from config_parser import ChannelConfig
 from signal_values import Signal
 from simulation import Channel, ChannelEvent, Simulation
 from vcd_simulation import VcdSimulation
 
 
-class TikzGenerator():
-    simulation: Simulation
+class TikzGenerator(BaseGenerator):
     config_channels: List[ChannelConfig]
     start: int
     end: int

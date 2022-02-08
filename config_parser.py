@@ -1,8 +1,9 @@
 from __future__ import annotations
-from typing import List
+from typing import Callable, List
 from dataclasses import dataclass
 from enum import Enum
 from signal_values import Representations
+from simulation import Channel
 
 @dataclass
 class SimulationConfig:
@@ -49,5 +50,5 @@ class SignalDirection(Enum):
 @dataclass
 class TableConfig:
     time_samples: List[int]
-    signals: List[ChannelConfig]
+    signal_criteria: Callable[[Channel], bool]
     

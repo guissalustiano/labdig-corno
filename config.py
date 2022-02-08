@@ -40,6 +40,6 @@ timing_config = SimulationConfig(
 )
 
 table_config = TableConfig(
-  time_samples=range(10, 720, 20),
-  signals=signals
+  time_samples=range(10000000, 10000000000, 20000000),
+  signal_criteria=lambda c: c.module == 'dut'
 )

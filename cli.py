@@ -24,7 +24,7 @@ def tikz_timing(vcd_filename):
 def tabular(vcd_filename):
     from config import table_config
     simulation: Simulation = VcdSimulation.from_filename(vcd_filename).to_simulation()
-    table_gen = TableGenerator(simulation, table_config.signals, table_config.time_samples)
+    table_gen = TableGenerator(simulation, table_config.time_samples, table_config.signal_criteria)
     print(table_gen.generate_table())
 
 if __name__ == '__main__':
