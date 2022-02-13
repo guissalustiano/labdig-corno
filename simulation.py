@@ -49,7 +49,6 @@ class Channel:
             i += 1
         end_index = i
         return self.events[start_index:end_index]
-        
 
 
 @dataclass
